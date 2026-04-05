@@ -10,6 +10,8 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -32,8 +34,19 @@ import javafx.stage.Stage;
 public class MainApp extends Application {
     private HotelManager hotelManager;
 
-    // View Components
-    private TableView<Room> roomTable;
+    // View Components Mapped to FXML
+    @FXML private TableView<Room> roomTable;
+    @FXML private TableColumn<Room, Integer> roomNoCol;
+    @FXML private TableColumn<Room, String> roomTypeCol;
+    @FXML private TableColumn<Room, String> priceCol;
+    @FXML private TableColumn<Room, Boolean> availCol;
+    @FXML private TableColumn<Room, String> amenitiesCol;
+
+    @FXML private Button btnAddRoom;
+    @FXML private Button btnBookRoom;
+    @FXML private Button btnCheckout;
+    @FXML private Button btnSaveData;
+
     private ObservableList<Room> roomObservableList;
 
     public static void main(String[] args) {
@@ -41,36 +54,29 @@ public class MainApp extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws Exception {
         hotelManager = new HotelManager();
         initDefaultRooms();
 
         // Rubric: Permanent storage of data in JDBC
         hotelManager.loadBookingsFromDB();
 
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/hotelos/gui/main.fxml"));
+        loader.setController(this);
+        javafx.scene.Parent rootLayout = loader.load();
+
+        initComponentStyles();
+        setupTableColumns();
+
         primaryStage.setTitle("Hotel Management System Capstone");
+        Scene scene = new Scene(rootLayout, 850, 600);
+        primaryStage.setScene(scene);
+        primaryStage.show();
 
-        // Layout: VBox for main layout with modern styling
-        VBox rootLayout = new VBox(20);
-        rootLayout.setPadding(new Insets(30));
-        rootLayout.setStyle("-fx-background-color: linear-gradient(to bottom right, #f8f9fa, #e9ecef);");
+        refreshTable();
+    }
 
-        Label titleLabel = new Label("Grand Hotel Management System");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
-        titleLabel.setStyle("-fx-text-fill: #1a252f; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 5, 0, 0, 2);");
-        titleLabel.setAlignment(Pos.CENTER);
-
-        createRoomTable();
-
-        HBox topBarBox = new HBox(15);
-        topBarBox.setAlignment(Pos.CENTER);
-
-        Button btnAddRoom = new Button("Add Room");
-        Button btnBookRoom = new Button("Book Selected Room");
-        Button btnCheckout = new Button("Checkout & Receipt");
-        Button btnSaveData = new Button("Save to DB (JDBC)");
-
-        // UI Styling using lambda functions
+    private void initComponentStyles() {
         java.util.function.BiConsumer<Button, String> styleBtn = (btn, color) -> {
             String baseStyle = "-fx-background-color: " + color
                     + "; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10 20 10 20; -fx-background-radius: 8;";
@@ -88,25 +94,24 @@ public class MainApp extends Application {
         styleBtn.accept(btnBookRoom, "#2ecc71");
         styleBtn.accept(btnCheckout, "#e74c3c");
         styleBtn.accept(btnSaveData, "#9b59b6");
+    }
 
-        topBarBox.getChildren().addAll(btnAddRoom, btnBookRoom, btnCheckout, btnSaveData);
+    private void setupTableColumns() {
+        roomObservableList = FXCollections.observableArrayList();
 
-        // Event handling bindings
-        btnAddRoom.setOnAction(e -> showAddRoomDialog());
-        btnBookRoom.setOnAction(e -> showBookingDialog());
-        btnCheckout.setOnAction(e -> handleCheckout());
-        btnSaveData.setOnAction(e -> {
-            hotelManager.saveBookingsToDB();
-            showAlert(Alert.AlertType.INFORMATION, "Success", "Bookings saved to Database via JDBC!");
+        roomNoCol.setCellValueFactory(cellData -> new SimpleIntegerProperty(cellData.getValue().getRoomNumber()).asObject());
+        roomTypeCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getRoomType().name()));
+        priceCol.setCellValueFactory(cellData -> new SimpleStringProperty("$" + cellData.getValue().getRoomType().getBasePrice()));
+        availCol.setCellValueFactory(cellData -> new SimpleBooleanProperty(cellData.getValue().isAvailable()));
+        amenitiesCol.setCellValueFactory(cellData -> {
+            if (cellData.getValue() instanceof Amenities) {
+                Amenities a = (Amenities) cellData.getValue();
+                return new SimpleStringProperty(a.provideWifi() + " & " + a.provideBreakfast());
+            }
+            return new SimpleStringProperty("None");
         });
 
-        rootLayout.getChildren().addAll(titleLabel, topBarBox, roomTable);
-
-        Scene scene = new Scene(rootLayout, 850, 600);
-        primaryStage.setScene(scene);
-        primaryStage.show();
-
-        refreshTable();
+        roomTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
     }
 
     private void initDefaultRooms() {
@@ -116,35 +121,25 @@ public class MainApp extends Application {
         hotelManager.addRoom(new LuxuryRoom(301, RoomType.SUITE));
     }
 
-    private void createRoomTable() {
-        roomTable = new TableView<>();
-        roomObservableList = FXCollections.observableArrayList();
+    @FXML
+    private void showAddRoomDialog(javafx.event.ActionEvent event) {
+        showAddRoomDialog();
+    }
 
-        TableColumn<Room, Integer> roomNoCol = new TableColumn<>("Room No.");
-        roomNoCol.setCellValueFactory(
-                cellData -> new SimpleIntegerProperty(cellData.getValue().getRoomNumber()).asObject());
+    @FXML
+    private void showBookingDialog(javafx.event.ActionEvent event) {
+        showBookingDialog();
+    }
 
-        TableColumn<Room, String> roomTypeCol = new TableColumn<>("Type");
-        roomTypeCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getRoomType().name()));
+    @FXML
+    private void handleCheckout(javafx.event.ActionEvent event) {
+        handleCheckout();
+    }
 
-        TableColumn<Room, String> priceCol = new TableColumn<>("Price/Night");
-        priceCol.setCellValueFactory(
-                cellData -> new SimpleStringProperty("$" + cellData.getValue().getRoomType().getBasePrice()));
-
-        TableColumn<Room, Boolean> availCol = new TableColumn<>("Available?");
-        availCol.setCellValueFactory(cellData -> new SimpleBooleanProperty(cellData.getValue().isAvailable()));
-
-        TableColumn<Room, String> amenitiesCol = new TableColumn<>("Amenities");
-        amenitiesCol.setCellValueFactory(cellData -> {
-            if (cellData.getValue() instanceof Amenities) {
-                Amenities a = (Amenities) cellData.getValue();
-                return new SimpleStringProperty(a.provideWifi() + " & " + a.provideBreakfast());
-            }
-            return new SimpleStringProperty("None");
-        });
-
-        roomTable.getColumns().addAll(roomNoCol, roomTypeCol, priceCol, availCol, amenitiesCol);
-        roomTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    @FXML
+    private void handleSaveData(javafx.event.ActionEvent event) {
+        hotelManager.saveBookingsToDB();
+        showAlert(Alert.AlertType.INFORMATION, "Success", "Bookings saved to Database via JDBC!");
     }
 
     private void refreshTable() {

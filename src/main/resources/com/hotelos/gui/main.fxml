@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="TOP_CENTER" spacing="20.0" style="-fx-background-color: linear-gradient(to bottom right, #f8f9fa, #e9ecef);" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+   <padding>
+      <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+   </padding>
+   <children>
+      <Label alignment="CENTER" style="-fx-text-fill: #1a252f; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 5, 0, 0, 2);" text="Grand Hotel Management System">
+         <font>
+            <Font name="Segoe UI Bold" size="32.0" />
+         </font>
+      </Label>
+      <HBox alignment="CENTER" spacing="15.0">
+         <children>
+            <Button fx:id="btnAddRoom" mnemonicParsing="false" onAction="#showAddRoomDialog" text="Add Room" />
+            <Button fx:id="btnBookRoom" mnemonicParsing="false" onAction="#showBookingDialog" text="Book Selected Room" />
+            <Button fx:id="btnCheckout" mnemonicParsing="false" onAction="#handleCheckout" text="Checkout &amp; Receipt" />
+            <Button fx:id="btnSaveData" mnemonicParsing="false" onAction="#handleSaveData" text="Save to DB (JDBC)" />
+         </children>
+      </HBox>
+      <TableView fx:id="roomTable" VBox.vgrow="ALWAYS">
+        <columns>
+          <TableColumn fx:id="roomNoCol" text="Room No." />
+          <TableColumn fx:id="roomTypeCol" text="Type" />
+          <TableColumn fx:id="priceCol" text="Price/Night" />
+          <TableColumn fx:id="availCol" text="Available?" />
+          <TableColumn fx:id="amenitiesCol" text="Amenities" />
+        </columns>
+      </TableView>
+   </children>
+</VBox>
