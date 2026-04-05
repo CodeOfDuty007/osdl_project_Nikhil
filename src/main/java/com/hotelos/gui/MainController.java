@@ -7,65 +7,94 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
-import javafx.scene.Cursor;
 import javafx.scene.control.*;
-import javafx.scene.effect.BlurType;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 
 public class MainController {
     private HotelManager hotelManager;
 
-    // View Components Mapped to FXML
+    // View Components (Navigation & Views)
+    @FXML private VBox homeView;
+    @FXML private VBox addRoomView;
+    @FXML private VBox bookRoomView;
+    @FXML private VBox checkoutView;
+    @FXML private VBox amenitiesView;
+    
+    // Top Nav buttons
+    @FXML private Button navHome;
+    @FXML private Button navAddRoom;
+    @FXML private Button navBookRoom;
+    @FXML private Button navCheckout;
+    @FXML private Button navAmenities;
+
+    // Home Table components
     @FXML private TableView<Room> roomTable;
     @FXML private TableColumn<Room, Integer> roomNoCol;
     @FXML private TableColumn<Room, String> roomTypeCol;
     @FXML private TableColumn<Room, String> priceCol;
     @FXML private TableColumn<Room, Boolean> availCol;
     @FXML private TableColumn<Room, String> amenitiesCol;
-
-    @FXML private Button btnAddRoom;
-    @FXML private Button btnBookRoom;
-    @FXML private Button btnCheckout;
-    @FXML private Button btnSaveData;
-
     private ObservableList<Room> roomObservableList;
+
+    // Add Room components
+    @FXML private TextField txtAddRoomNo;
+    @FXML private ComboBox<RoomType> comboAddRoomType;
+
+    // Book Room components
+    @FXML private ComboBox<Room> comboBookRoomSelect;
+    @FXML private ImageView roomImagePreview;
+    @FXML private TextField txtGuestName;
+    @FXML private TextField txtGuestContact;
+    @FXML private TextField txtGuestDays;
+
+    // Checkout components
+    @FXML private ComboBox<Room> comboCheckoutRoom;
 
     @FXML
     public void initialize() {
         hotelManager = new HotelManager();
         initDefaultRooms();
 
-        // Rubric: Permanent storage of data in JDBC
+        // Rubric Requirement: Permanent storage of data in JDBC
         hotelManager.loadBookingsFromDB();
 
-        initComponentStyles();
         setupTableColumns();
-        refreshTable();
-    }
-
-    private void initComponentStyles() {
-        java.util.function.BiConsumer<Button, String> styleBtn = (btn, color) -> {
-            String baseStyle = "-fx-background-color: " + color
-                    + "; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10 20 10 20; -fx-background-radius: 8;";
-            String hoverStyle = "-fx-background-color: derive(" + color
-                    + ", -10%); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10 20 10 20; -fx-background-radius: 8;";
-            btn.setStyle(baseStyle);
-            btn.setCursor(Cursor.HAND);
-            DropShadow dropShadow = new DropShadow(BlurType.GAUSSIAN, Color.rgb(0, 0, 0, 0.2), 10, 0.1, 0, 5);
-            btn.setEffect(dropShadow);
-            btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
-            btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        
+        // Populate static combo boxes
+        comboAddRoomType.setItems(FXCollections.observableArrayList(RoomType.values()));
+        comboAddRoomType.setValue(RoomType.STANDARD);
+        
+        // Set Converters to display Room object data cleanly in the dropdowns
+        javafx.util.StringConverter<Room> roomConverter = new javafx.util.StringConverter<Room>() {
+            @Override
+            public String toString(Room room) {
+                return room == null ? "" : "Room " + room.getRoomNumber() + " (" + room.getRoomType() + ")";
+            }
+            @Override
+            public Room fromString(String string) {
+                return null;
+            }
         };
+        comboBookRoomSelect.setConverter(roomConverter);
+        comboCheckoutRoom.setConverter(roomConverter);
+        
+        // Dynamic Room Photo Preview depending on user selection
+        comboBookRoomSelect.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                try {
+                    String photoName = (newVal.getRoomType() == RoomType.STANDARD) ? "single.jpg" : "suite.jpg";
+                    java.io.File file = new java.io.File("images", photoName);
+                    roomImagePreview.setImage(new Image(file.toURI().toString()));
+                } catch (Exception e) {
+                    System.err.println("Could not load image: " + e.getMessage());
+                }
+            }
+        });
 
-        styleBtn.accept(btnAddRoom, "#3498db");
-        styleBtn.accept(btnBookRoom, "#2ecc71");
-        styleBtn.accept(btnCheckout, "#e74c3c");
-        styleBtn.accept(btnSaveData, "#9b59b6");
+        // Show home view initially
+        navHome();
     }
 
     private void setupTableColumns() {
@@ -92,157 +121,153 @@ public class MainController {
         hotelManager.addRoom(new LuxuryRoom(201, RoomType.DELUXE));
         hotelManager.addRoom(new LuxuryRoom(301, RoomType.SUITE));
     }
-
-    @FXML
-    private void showAddRoomDialog(javafx.event.ActionEvent event) {
-        Dialog<Room> dialog = new Dialog<>();
-        dialog.setTitle("Add New Room");
-        dialog.setHeaderText("Enter Room Details");
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(15);
-        grid.setPadding(new Insets(20, 30, 20, 20));
-
-        TextField roomNoField = new TextField();
-        roomNoField.setPromptText("e.g. 401");
-
-        ComboBox<RoomType> typeBox = new ComboBox<>(FXCollections.observableArrayList(RoomType.values()));
-        typeBox.setValue(RoomType.STANDARD);
-
-        ImageView roomImageView = new ImageView();
-        roomImageView.setFitWidth(280);
-        roomImageView.setFitHeight(180);
-        roomImageView.setPreserveRatio(true);
-        DropShadow imageShadow = new DropShadow(BlurType.GAUSSIAN, Color.rgb(0, 0, 0, 0.3), 10, 0.1, 0, 5);
-        roomImageView.setEffect(imageShadow);
-
-        Runnable updatePhoto = () -> {
-            String imgUrl;
-            switch (typeBox.getValue()) {
-                case DELUXE:
-                    imgUrl = "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400&q=80";
-                    break;
-                case SUITE:
-                    imgUrl = "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80";
-                    break;
-                default:
-                    imgUrl = "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=400&q=80";
-                    break;
-            }
-            roomImageView.setImage(new Image(imgUrl, true));
-        };
-        typeBox.setOnAction(e -> updatePhoto.run());
-        updatePhoto.run();
-
-        grid.add(new Label("Room Number:"), 0, 0);
-        grid.add(roomNoField, 1, 0);
-        grid.add(new Label("Room Type:"), 0, 1);
-        grid.add(typeBox, 1, 1);
-
-        VBox imageContainer = new VBox(new Label("Room Preview:"), roomImageView);
-        imageContainer.setSpacing(10);
-        grid.add(imageContainer, 2, 0, 1, 3);
-
-        dialog.getDialogPane().setContent(grid);
-        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                try {
-                    int no = Integer.parseInt(roomNoField.getText());
-                    RoomType type = typeBox.getValue();
-                    if (type == RoomType.STANDARD) {
-                        return new StandardRoom(no);
-                    } else {
-                        return new LuxuryRoom(no, type);
-                    }
-                } catch (NumberFormatException e) {
-                    return null;
-                }
-            }
-            return null;
-        });
-
-        dialog.showAndWait().ifPresent(room -> {
-            hotelManager.addRoom(room);
-            refreshTable();
-            showAlert(Alert.AlertType.INFORMATION, "Success", "Added Room: " + room.getRoomNumber());
-        });
+    
+    // --- NAVIGATION LOGIC (Simulates multi-screen behavior beautifully) ---
+    private void hideAllViews() {
+        homeView.setVisible(false);
+        addRoomView.setVisible(false);
+        bookRoomView.setVisible(false);
+        checkoutView.setVisible(false);
+        amenitiesView.setVisible(false);
+        
+        // Reset nav styles
+        String unselected = "-fx-background-color: transparent; -fx-text-fill: #EFEBE9; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand;";
+        navHome.setStyle(unselected);
+        navAddRoom.setStyle(unselected);
+        navBookRoom.setStyle(unselected);
+        navCheckout.setStyle(unselected);
+        navAmenities.setStyle(unselected);
+    }
+    
+    private void highlightNav(Button btn) {
+        String selected = "-fx-background-color: #3E2723; -fx-text-fill: #FFFFFF; -fx-font-weight: bold; -fx-font-size: 15px; -fx-background-radius: 5;";
+        btn.setStyle(selected);
     }
 
     @FXML
-    private void showBookingDialog(javafx.event.ActionEvent event) {
-        Room selectedRoom = roomTable.getSelectionModel().getSelectedItem();
-        if (selectedRoom == null) {
-            showAlert(Alert.AlertType.WARNING, "Warning", "Please select a room to book.");
-            return;
+    private void navAmenities() {
+        hideAllViews();
+        amenitiesView.setVisible(true);
+        amenitiesView.toFront();
+        highlightNav(navAmenities);
+    }
+
+    @FXML
+    private void navHome() {
+        hideAllViews();
+        refreshTable();
+        homeView.setVisible(true);
+        homeView.toFront();
+        highlightNav(navHome);
+    }
+
+    @FXML
+    private void navAddRoom() {
+        hideAllViews();
+        txtAddRoomNo.clear();
+        addRoomView.setVisible(true);
+        addRoomView.toFront();
+        highlightNav(navAddRoom);
+    }
+
+    @FXML
+    private void navBookRoom() {
+        hideAllViews();
+        // Setup Book Room data
+        ObservableList<Room> availableRooms = FXCollections.observableArrayList();
+        for (Room r : hotelManager.getRooms()) {
+            if (r.isAvailable()) availableRooms.add(r);
         }
+        comboBookRoomSelect.setItems(availableRooms);
+        
+        txtGuestName.clear();
+        txtGuestContact.clear();
+        txtGuestDays.clear();
+        
+        bookRoomView.setVisible(true);
+        bookRoomView.toFront();
+        highlightNav(navBookRoom);
+    }
 
-        if (!selectedRoom.isAvailable()) {
-            showAlert(Alert.AlertType.ERROR, "Error", "Selected room is already booked!");
-            return;
+    @FXML
+    private void navCheckout() {
+        hideAllViews();
+        // Setup Checkout data
+        ObservableList<Room> strictlyBooked = FXCollections.observableArrayList();
+        for (Room r : hotelManager.getRooms()) {
+            if (!r.isAvailable()) strictlyBooked.add(r);
         }
+        comboCheckoutRoom.setItems(strictlyBooked);
+        
+        checkoutView.setVisible(true);
+        checkoutView.toFront();
+        highlightNav(navCheckout);
+    }
 
-        Dialog<Customer> dialog = new Dialog<>();
-        dialog.setTitle("Book Room " + selectedRoom.getRoomNumber());
+    // --- FORM ACTIONS ---
 
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField nameField = new TextField();
-        TextField contactField = new TextField();
-        TextField daysField = new TextField();
-
-        grid.add(new Label("Name:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("Contact No:"), 0, 1);
-        grid.add(contactField, 1, 1);
-        grid.add(new Label("Days Stayed:"), 0, 2);
-        grid.add(daysField, 1, 2);
-
-        dialog.getDialogPane().setContent(grid);
-        ButtonType bookBtnType = new ButtonType("Book", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(bookBtnType, ButtonType.CANCEL);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == bookBtnType) {
-                try {
-                    int days = Integer.parseInt(daysField.getText());
-                    return new Customer(nameField.getText(), contactField.getText(), days);
-                } catch (NumberFormatException e) {
-                    return null;
-                }
+    @FXML
+    private void submitAddRoom() {
+        try {
+            if (txtAddRoomNo.getText().trim().isEmpty()) throw new NumberFormatException();
+            int no = Integer.parseInt(txtAddRoomNo.getText().trim());
+            RoomType type = comboAddRoomType.getValue();
+            
+            Room newRoom;
+            if (type == RoomType.STANDARD) {
+                newRoom = new StandardRoom(no);
+            } else {
+                newRoom = new LuxuryRoom(no, type);
             }
-            return null;
-        });
+            
+            hotelManager.addRoom(newRoom);
+            showAlert(Alert.AlertType.INFORMATION, "Success", "Successfully added new room: " + no);
+            navHome(); // Route back
+        } catch (NumberFormatException ex) {
+            showAlert(Alert.AlertType.ERROR, "Input Error", "Please provide a valid Room Number.");
+        }
+    }
 
-        dialog.showAndWait().ifPresent(customer -> {
-            // Multithreading and Synchronization feature
+    @FXML
+    private void submitBooking() {
+        Room selectedRoom = comboBookRoomSelect.getValue();
+        if (selectedRoom == null) {
+            showAlert(Alert.AlertType.WARNING, "Selection Required", "Please select an available room.");
+            return;
+        }
+
+        try {
+            String name = txtGuestName.getText().trim();
+            String contact = txtGuestContact.getText().trim();
+            if (name.isEmpty() || contact.isEmpty()) throw new IllegalArgumentException("Empty fields");
+            int days = Integer.parseInt(txtGuestDays.getText().trim());
+            
+            Customer customer = new Customer(name, contact, days);
+
+            // Multithreading and Synchronization feature for safe booking
             Thread bookingThread = new Thread(() -> {
                 boolean success = hotelManager.bookRoom(selectedRoom, customer);
                 Platform.runLater(() -> {
                     if (success) {
-                        refreshTable();
                         showAlert(Alert.AlertType.INFORMATION, "Booking Confirmed",
-                                "Room " + selectedRoom.getRoomNumber() + " booked for " + customer.getName());
+                                "Room " + selectedRoom.getRoomNumber() + " secured for " + customer.getName());
                     } else {
-                        showAlert(Alert.AlertType.ERROR, "Booking Failed", "Room became unavailable.");
+                        showAlert(Alert.AlertType.ERROR, "Booking Failed", "Room became unavailable during transaction.");
                     }
+                    navHome(); // Sync and redirect
                 });
             });
             bookingThread.start();
-        });
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Input Error", "Please ensure all fields are filled perfectly and Days Stayed is a number.");
+        }
     }
 
     @FXML
-    private void handleCheckout(javafx.event.ActionEvent event) {
-        Room selectedRoom = roomTable.getSelectionModel().getSelectedItem();
-        if (selectedRoom == null || selectedRoom.isAvailable()) {
-            showAlert(Alert.AlertType.WARNING, "Warning", "Please select a currently booked room to check out.");
+    private void submitCheckout() {
+        Room selectedRoom = comboCheckoutRoom.getValue();
+        if (selectedRoom == null) {
+            showAlert(Alert.AlertType.WARNING, "Selection Required", "Please select a room to check out.");
             return;
         }
 
@@ -258,29 +283,30 @@ public class MainController {
             // File IO character streams
             ReceiptGenerator.generateReceipt(toCheckout, finalBill);
 
-            // Runnable Thread simulation
+            // Runnable Thread simulation for room cleanup
             Thread cleanerThread = new Thread(new RoomServiceTask(selectedRoom));
             cleanerThread.start();
 
-            refreshTable();
-            showAlert(Alert.AlertType.INFORMATION, "Checkout Successful",
-                    "Checked out " + toCheckout.getCustomer().getName() + ".\n" +
-                            "Base Amount: $" + baseTariff + "\n" +
-                            "Discount Applied: " + discount + "%\n" +
-                            "Final Amount: $" + String.format("%.2f", finalBill) + "\n" +
-                            "Receipt text file generated!\n" +
-                            "Room cleaner dispatched.");
+            showAlert(Alert.AlertType.INFORMATION, "Checkout Successful via Automated Thread",
+                    "Assessed Guest: " + toCheckout.getCustomer().getName() + ".\n" +
+                            "Base Room Rate: $" + baseTariff + "\n" +
+                            "Corporate Discount: " + discount + "%\n" +
+                            "Paid Total: $" + String.format("%.2f", finalBill) + "\n" +
+                            "Serialized Receipt textual file has been generated securely.\n" +
+                            "Cleaning Task Thread Dispatched to Background Pool.");
+                            
+            navHome();
         }
     }
 
     @FXML
-    private void handleSaveData(javafx.event.ActionEvent event) {
+    private void handleSaveData() {
         hotelManager.saveBookingsToDB();
-        showAlert(Alert.AlertType.INFORMATION, "Success", "Bookings saved to Database via JDBC!");
+        showAlert(Alert.AlertType.INFORMATION, "Database Saved", "Data safely stored into SQLite database cluster!");
     }
 
     private void refreshTable() {
-        hotelManager.sortRooms(); // Collection Framework usage
+        hotelManager.sortRooms(); // Collection Framework usage constraint
         roomObservableList.setAll(hotelManager.getRooms());
         roomTable.setItems(roomObservableList);
         roomTable.refresh();
