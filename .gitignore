@@ -1,0 +1,6 @@
+target/
+*.db
+*.dat
+*.txt
+.DS_Store
+.vscode/
