@@ -1,0 +1,12 @@
+==============================
+        HOTEL RECEIPT         
+==============================
+Guest Name: nikhil 
+Contact: 39339393939
+Room Number: 101
+Room Type: STANDARD
+Days Stayed: 33
+------------------------------
+Final Amount (After Discount): $3135.00
+==============================
+Thank you for staying with us!
